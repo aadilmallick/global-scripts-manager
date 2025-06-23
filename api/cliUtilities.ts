@@ -4,6 +4,7 @@ import figlet from "npm:figlet";
 import inquirer from "npm:inquirer";
 import { input, confirm as confirmPrompt } from "npm:@inquirer/prompts";
 import process from "node:process";
+
 export async function showQuickPick<T extends readonly string[]>(
   choices: T,
   message?: string,
@@ -14,9 +15,11 @@ export async function showQuickPick<T extends readonly string[]>(
     type: "list",
     message: message ?? "Choose an option:",
     choices,
-    // default: () => {
-    //   return defaultChoice ?? choices[0];
-    // },
+    default: defaultChoice
+      ? (() => {
+          return defaultChoice;
+        })()
+      : undefined,
   });
   return result.template as T[number];
 }
@@ -81,36 +84,7 @@ export function* getTextChunks(text: string, chunkSize: number) {
 }
 
 export class TextStreamer {
-  private writableStream;
-  constructor(private delayMs: number, private chunkSize = 1) {
-    this.writableStream = new WritableStream({
-      async write(chunk, controller) {
-        process.stdout.write(chunk);
-        await delay(delayMs);
-      },
-    });
-  }
-
-  async streamText(text: string) {
-    // let startIndex = 0;
-    // const stopIndex = text.length;
-    const generator = getTextChunks(text, this.chunkSize);
-    const readableStream = new ReadableStream({
-      pull: (controller) => {
-        const { value, done } = generator.next();
-        if (done) {
-          controller.close();
-        } else {
-          controller.enqueue(value);
-        }
-      },
-    });
-    // for await (const chunk of readableStream) {
-    //   console.log(chunk);
-    // }
-    await readableStream.pipeTo(this.writableStream);
-    console.log();
-  }
+  constructor(private delayMs: number, private chunkSize = 1) {}
 
   async stream(text: string) {
     // let startIndex = 0;

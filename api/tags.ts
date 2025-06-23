@@ -1,3 +1,5 @@
+import { getConfirm } from "./cliUtilities.ts";
+
 export function parseTags(tags: string) {
   return tags
     .trim()
@@ -5,8 +7,10 @@ export function parseTags(tags: string) {
     .map((t) => t.trim());
 }
 /* ADD TAGS */
-export function getTags() {
-  const shouldAddTags = confirm("do you want to add any tags to the script?");
+export async function getTags() {
+  const shouldAddTags = await getConfirm(
+    "do you want to add any tags to the script?"
+  );
   let tags: string[] = [];
   if (shouldAddTags) {
     const tagsToParse = prompt("type in a comma separated list of tags:");
@@ -17,8 +21,8 @@ export function getTags() {
   return [...new Set(tags)];
 }
 
-export function editTags(currentTags: string[]) {
-  const shoulEditTags = confirm("do you want to edit your tags?");
+export async function editTags(currentTags: string[]) {
+  const shoulEditTags = await getConfirm("do you want to edit your tags?");
   if (!shoulEditTags) return currentTags;
   let tags: string[] = currentTags;
   if (shoulEditTags) {

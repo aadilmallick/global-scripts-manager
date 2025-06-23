@@ -21,6 +21,7 @@ import {
 import { editTags, getTags } from "./api/tags.ts";
 import { globals } from "./globals.ts";
 import { bgGreen, bgRed, yellow } from "jsr:@std/internal@^1.0.5/styles";
+import CLI from "./api/CLI.ts";
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 
 const pathsHandler = new PathsHandler(
@@ -36,6 +37,55 @@ const textStreamer = new TextStreamer(15, 1);
 
 if (import.meta.main) {
   chooseAction();
+}
+
+async function chooseAction() {
+  await textStreamer.stream(
+    "Welcome to Global Scripts Manager. What would you like to do with your scripts today?"
+  );
+
+  // TODO: list actions here
+  const actions = [
+    "create script",
+    "delete script",
+    "edit script",
+    "list scripts",
+    "copy script to clipboard",
+    "quit",
+  ] as const;
+  const chosenAction = await showQuickPick(actions, "choose an action:");
+
+  switch (chosenAction) {
+    case "create script":
+      await createScript();
+      break;
+    case "delete script":
+      await deleteScript();
+      break;
+    case "edit script":
+      await editScript();
+      break;
+    case "list scripts":
+      listScripts();
+      break;
+    case "copy script to clipboard":
+      await copyScriptToClipboard();
+      break;
+    case "quit":
+      await quit();
+  }
+}
+
+async function copyScriptToClipboard() {
+  const script = await chooseScript();
+  if (!script) return;
+  const scriptPath = script.filepath;
+  try {
+    await CLI.linux(`cat ${scriptPath} | pbcopy`);
+    console.log("script copied to clipboard");
+  } catch (e) {
+    console.error("Error copying script to clipboard:", e);
+  }
 }
 
 // quit action
@@ -66,7 +116,7 @@ async function createScript() {
     finalScriptName = scriptName;
   }
 
-  const tags = getTags();
+  const tags = await getTags();
   jsonHandler.addTags(tags);
 
   const newScript = scriptModel.addScript({
@@ -102,33 +152,15 @@ async function createScript() {
   succeed2();
 }
 
-async function chooseAction() {
-  await textStreamer.stream(
-    "Welcome to Global Scripts Manager. What would you like to do with your scripts today?"
-  );
-
-  // TODO: list actions here
-  const actions = [
-    "create script",
-    "delete script",
-    "edit script",
-    "quit",
-  ] as const;
-  const chosenAction = await showQuickPick(actions, "choose an action:");
-
-  switch (chosenAction) {
-    case "create script":
-      await createScript();
-      break;
-    case "delete script":
-      await deleteScript();
-      break;
-    case "edit script":
-      await editScript();
-      break;
-    case "quit":
-      await quit();
-  }
+function listScripts() {
+  const scriptInfo = scriptModel.scripts.map((s) => {
+    return {
+      name: s.name,
+      tags: s.tags.join(", "),
+      isGlobal: s.isGlobal ? "global" : "local",
+    };
+  });
+  console.log(JSON.stringify(scriptInfo, null, 2));
 }
 
 async function chooseScript() {
@@ -222,8 +254,8 @@ async function editScript() {
     return script;
   }
 
-  function editTagsAction(script: Script) {
-    const tags = editTags(script.tags);
+  async function editTagsAction(script: Script) {
+    const tags = await editTags(script.tags);
     if (tags.length > 0) {
       const updatedScript = scriptModel.editScript(script, { tags });
       jsonHandler.addTags(tags);
@@ -283,7 +315,7 @@ async function editScript() {
         updatedScript = await editName(updatedScript);
         break;
       case "edit tags":
-        updatedScript = editTagsAction(updatedScript);
+        updatedScript = await editTagsAction(updatedScript);
         break;
       case "add/remove from path":
         updatedScript = await editIsGlobalAction(updatedScript);
