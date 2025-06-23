@@ -33,6 +33,10 @@ export class ScriptsModel {
     });
   }
 
+  isScriptNameUnique(name: string): boolean {
+    return !this.scripts.some((s) => s.name === name);
+  }
+
   addScript(
     script: Pick<Script, "name"> &
       Partial<Pick<Script, "tags" | "isGlobal" | "isPinned" | "schedule">>

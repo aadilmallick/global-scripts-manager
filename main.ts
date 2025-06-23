@@ -20,7 +20,7 @@ import {
 } from "./api/ScriptModel.ts";
 import { editTags, getTags } from "./api/tags.ts";
 import { globals } from "./globals.ts";
-import { bgGreen, bgRed, yellow } from "jsr:@std/internal@^1.0.5/styles";
+import { bgGreen, bgRed, red, yellow } from "jsr:@std/internal@^1.0.5/styles";
 import CLI from "./api/CLI.ts";
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 
@@ -109,6 +109,12 @@ async function createScript() {
     );
     if (!scriptName) {
       console.log("Let's try that again ...");
+      continue;
+    }
+    if (!scriptModel.isScriptNameUnique(finalScriptName)) {
+      console.log(
+        "Script name already exists. Please choose a different name."
+      );
       continue;
     }
     const filenameRegex = /^([A-Za-z\-_]|\d)*$/;
@@ -240,16 +246,30 @@ async function editScript() {
   async function editName(script: Script) {
     const newName = prompt("what should the new name be?");
     if (newName) {
-      const updatedScript = scriptModel.editScript(script, { name: newName });
-      return updatedScript;
-    }
-    if (script.isGlobal && newName) {
+      if (!scriptModel.isScriptNameUnique(newName)) {
+        console.log(
+          "Script name already exists. Please choose a different name."
+        );
+        return script;
+      }
       const { succeed: succeed2 } = showLoader("Renaming file...");
-      await FileManager.renameFile(
-        script.filepath,
-        path.join(pathsHandler.getFolderPathForScript(script), newName)
-      );
-      succeed2();
+      try {
+        const newFilepath = path.join(
+          pathsHandler.getFolderPathForScript(script),
+          newName
+        );
+        // 1. first rename file
+        await FileManager.renameFile(script.filepath, newFilepath);
+        // 2. udpate state
+        const updatedScript = scriptModel.editScript(script, {
+          name: newName,
+          filepath: newFilepath,
+        });
+        succeed2();
+        return updatedScript;
+      } catch (e) {
+        console.error(red("whoops, couldn't rename file"));
+      }
     }
     return script;
   }
