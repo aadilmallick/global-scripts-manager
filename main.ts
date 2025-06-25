@@ -164,8 +164,11 @@ function listScripts() {
       name: s.name,
       tags: s.tags.join(", "),
       isGlobal: s.isGlobal ? "global" : "local",
+      filepath: s.filepath,
     };
   });
+  const allTags = [...jsonHandler.getTags()];
+  console.log(bgGreen("all tags:"), allTags);
   console.log(JSON.stringify(scriptInfo, null, 2));
 }
 
@@ -237,7 +240,6 @@ async function deleteScript() {
 }
 
 async function editScript() {
-  // TODO: edit script
   const script = await chooseScript();
   if (!script) return;
 

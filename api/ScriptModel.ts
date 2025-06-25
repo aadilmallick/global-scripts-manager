@@ -143,6 +143,10 @@ export class PathsHandler {
 export class ScriptsJSONHandler {
   public tags = new Set<string>();
 
+  public getTags() {
+    return [...this.tags];
+  }
+
   constructor(private pathsHandler: PathsHandler) {}
 
   private async upsertFolder() {
