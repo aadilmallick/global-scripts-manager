@@ -1,0 +1,16 @@
+on: [push, workflow_dispatch]
+
+jobs:
+  create-executable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno compile -A -o gsm main.ts
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsm
+          path: gsm

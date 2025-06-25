@@ -21,7 +21,7 @@ export async function showQuickPick<T extends readonly string[]>(
         })()
       : undefined,
   });
-  return result.template as T[number];
+  return result.template as T[number] | undefined;
 }
 
 export async function getConfirm(message: string) {

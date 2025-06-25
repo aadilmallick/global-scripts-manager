@@ -1,15 +1,41 @@
-# project
+# Global Scripts Manager
 
-## Roadmap
+A command-line tool for managing global scripts across your system. This tool helps you:
 
-The CLI should list the scripts you have from the JSON, ask if you want to create a script, run a script, update a script, delete a script or quit.
+- Create, edit, and delete scripts that can be accessed from anywhere
+- Organize scripts with tags for easy searching
+- Copy script contents to clipboard
+- Open scripts in your preferred editor
+- Track script execution with logs
+- Manage script visibility in your system PATH
 
-- If you want to run a script, it gives you the full path if not global and gives you the command to run if global
-- If you want to edit a script, it gives you the option of adding or removing from the path, and prints out the full path of the script
-- If you want to delete a script, it asks for confirmation for also deleting the file. If not given, it just deletes the script from the json.
-- If you want to create a script, it asks for the name of the script, creates a folder which is combination of name and id, then creates a bash script.
+Built with Deno, this tool provides an interactive interface to streamline your script management workflow. It maintains a central repository of your scripts while handling all the complexity of making them globally accessible.
 
-## Adding cron jobns
+## Installation
+
+Just manually download the executable from the [releases](https://github.com/aadildev/global-scripts-manager/releases) page.
+
+You can use it like so:
+
+```bash
+./gsm
+```
+
+Or add it to your path for global use:
+
+```bash
+mv gsm /usr/local/bin/gsm
+```
+
+Verify installation:
+
+```bash
+which gsm
+```
+
+## Personal learning
+
+### Adding cron jobns
 
 You can programmatically add a cron job in Linux by using the `crontab` command-line tool or scripting languages like Python or Bash.
 

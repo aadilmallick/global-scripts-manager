@@ -35,12 +35,20 @@ const scriptModel = new ScriptsModel(pathsHandler, scripts);
 
 const textStreamer = new TextStreamer(15, 1);
 
+async function streamText(text: string) {
+  if (Deno.env.get("IN_DOCKER")) {
+    console.log(text);
+  } else {
+    await textStreamer.stream(text);
+  }
+}
+
 if (import.meta.main) {
   chooseAction();
 }
 
 async function chooseAction() {
-  await textStreamer.stream(
+  await streamText(
     "Welcome to Global Scripts Manager. What would you like to do with your scripts today?"
   );
 
@@ -51,6 +59,7 @@ async function chooseAction() {
     "edit script",
     "list scripts",
     "copy script to clipboard",
+    "open script in editor",
     "quit",
   ] as const;
   const chosenAction = await showQuickPick(actions, "choose an action:");
@@ -70,6 +79,9 @@ async function chooseAction() {
       break;
     case "copy script to clipboard":
       await copyScriptToClipboard();
+      break;
+    case "open script in editor":
+      await openScriptInEditor();
       break;
     case "quit":
       await quit();
@@ -158,18 +170,28 @@ async function createScript() {
   succeed2();
 }
 
-function listScripts() {
-  const scriptInfo = scriptModel.scripts.map((s) => {
-    return {
-      name: s.name,
-      tags: s.tags.join(", "),
-      isGlobal: s.isGlobal ? "global" : "local",
-      filepath: s.filepath,
-    };
-  });
-  const allTags = [...jsonHandler.getTags()];
-  console.log(bgGreen("all tags:"), allTags);
-  console.log(JSON.stringify(scriptInfo, null, 2));
+async function listScripts() {
+  const action = await showQuickPick(
+    ["list all scripts", "view json"] as const,
+    "choose an action:"
+  );
+  if (!action) return;
+  if (action === "list all scripts") {
+    const scriptInfo = scriptModel.scripts.map((s) => {
+      return {
+        name: s.name,
+        tags: s.tags.join(", "),
+        isGlobal: s.isGlobal ? "global" : "local",
+        filepath: s.filepath,
+      };
+    });
+    const allTags = [...jsonHandler.getTags()];
+    console.log(bgGreen("all tags:"), allTags);
+    console.log(JSON.stringify(scriptInfo, null, 2));
+  }
+  if (action === "view json") {
+    await openPathInEditor(pathsHandler.jsonFilePath);
+  }
 }
 
 async function chooseScript() {
@@ -243,7 +265,7 @@ async function editScript() {
   const script = await chooseScript();
   if (!script) return;
 
-  await textStreamer.stream(`editing script at path: ${script.filepath}`);
+  await streamText(`editing script at path: ${script.filepath}`);
 
   async function editName(script: Script) {
     const newName = prompt("what should the new name be?");
@@ -328,10 +350,11 @@ async function editScript() {
     "add/remove from path",
     "save changes",
   ] as const;
-  let chosenAction: (typeof actions)[number];
+  let chosenAction: (typeof actions)[number] | undefined;
   let updatedScript = script;
   do {
     chosenAction = await showQuickPick(actions, "choose an action:");
+    if (!chosenAction) continue;
     switch (chosenAction) {
       case "edit name":
         updatedScript = await editName(updatedScript);
@@ -346,4 +369,26 @@ async function editScript() {
   } while (chosenAction !== "save changes");
 
   await saveChanges();
+}
+
+async function openScriptInEditor() {
+  const script = await chooseScript();
+  if (!script) return;
+  await openPathInEditor(script.filepath);
+}
+
+async function openPathInEditor(path: string) {
+  const editor = await showQuickPick(
+    ["code", "cursor", "nano", "vi"] as const,
+    "choose an editor:"
+  );
+  if (!editor) return;
+  const { succeed, fail } = showLoader("Opening script in editor...");
+  try {
+    await CLI.linux(`${editor} ${path}`);
+    succeed();
+  } catch (e) {
+    console.error(e);
+    fail();
+  }
 }

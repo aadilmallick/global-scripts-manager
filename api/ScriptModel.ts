@@ -193,8 +193,7 @@ export class ScriptsJSONHandler {
       this.tags = new Set([...this.tags, ...parsedData.metadata.tags]);
       return parsedData;
     } catch (e) {
-      console.log("error when reading");
-      console.error(e);
+      console.log("current scripts file is empty.");
       return null;
     }
   }

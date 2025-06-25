@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  deno-cli:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - ROOT_FOLDER=/app/scripts
+      - IN_DOCKER=true
+    # Uncomment to mount your scripts or data
+    # volumes:
+    #   - ./scripts:/app/scripts
+    #   - ./scripts.json:/app/scripts.json
+    #   - ./api:/app/api
+    #   - ./globals.ts:/app/globals.ts
+    #   - ./main.ts:/app/main.ts
+    #   - ./deno.json:/app/deno.json
+    #   - ./deno.lock:/app/deno.lock
