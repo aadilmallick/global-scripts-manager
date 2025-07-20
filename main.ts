@@ -22,6 +22,7 @@ import { editTags, getTags } from "./api/tags.ts";
 import { globals } from "./globals.ts";
 import { bgGreen, bgRed, red, yellow } from "jsr:@std/internal@^1.0.5/styles";
 import CLI from "./api/CLI.ts";
+import process from "node:process";
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 
 const pathsHandler = new PathsHandler(
@@ -62,30 +63,45 @@ async function chooseAction() {
     "open script in editor",
     "quit",
   ] as const;
+  // let chosenAction: (typeof actions)[number] | undefined;
   const chosenAction = await showQuickPick(actions, "choose an action:");
 
-  switch (chosenAction) {
-    case "create script":
-      await createScript();
-      break;
-    case "delete script":
-      await deleteScript();
-      break;
-    case "edit script":
-      await editScript();
-      break;
-    case "list scripts":
-      listScripts();
-      break;
-    case "copy script to clipboard":
-      await copyScriptToClipboard();
-      break;
-    case "open script in editor":
-      await openScriptInEditor();
-      break;
-    case "quit":
-      await quit();
+  async function handleAction(action: (typeof actions)[number]) {
+    switch (action) {
+      case "create script":
+        await createScript();
+        break;
+      case "delete script":
+        await deleteScript();
+        break;
+      case "edit script":
+        await editScript();
+        break;
+      case "list scripts":
+        listScripts();
+        break;
+      case "copy script to clipboard":
+        await copyScriptToClipboard();
+        break;
+      case "open script in editor":
+        await openScriptInEditor();
+        break;
+      case "quit":
+        await quit();
+        break;
+    }
   }
+  if (chosenAction) {
+    await handleAction(chosenAction);
+  }
+  // while (chosenAction !== "quit" && chosenAction !== undefined) {
+  //   await handleAction(chosenAction);
+  //   console.log("\n\n");
+  //   chosenAction = await showQuickPick(actions, "choose an action:");
+  //   if (!chosenAction) {
+  //     await handleAction("quit");
+  //   }
+  // }
 }
 
 async function copyScriptToClipboard() {
@@ -379,7 +395,7 @@ async function openScriptInEditor() {
 
 async function openPathInEditor(path: string) {
   const editor = await showQuickPick(
-    ["code", "cursor", "nano", "vi"] as const,
+    ["code", "cursor", "nano", "vi", "notepad", "micro", "edit"] as const,
     "choose an editor:"
   );
   if (!editor) return;
@@ -392,3 +408,8 @@ async function openPathInEditor(path: string) {
     fail();
   }
 }
+
+process.on("SIGINT", () => {
+  console.log("\n\nSIGINT received, quitting...");
+  Deno.exit();
+});

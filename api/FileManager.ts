@@ -7,9 +7,14 @@ async function getShellProfileContents() {
   // Detect the user's shell and profile file
   const shell = process.env.SHELL || "";
   let profileFile = "";
+  let additionalProfileFiles: string[] = [];
   if (shell.includes("zsh")) {
     profileFile = path.join(os.homedir(), ".zshrc");
   } else if (shell.includes("bash")) {
+    additionalProfileFiles = [
+      path.join(os.homedir(), ".profile"),
+      path.join(os.homedir(), ".bash_profile"),
+    ];
     profileFile = path.join(os.homedir(), ".bashrc");
   } else {
     // fallback
@@ -24,11 +29,12 @@ async function getShellProfileContents() {
     console.error(e);
     // File may not exist, will be created
   }
-  return { profileFile, content };
+  return { profileFile, content, additionalProfileFiles };
 }
 
 export async function addToPath(folderPath: string) {
-  const { profileFile, content } = await getShellProfileContents();
+  const { profileFile, content, additionalProfileFiles } =
+    await getShellProfileContents();
   const exportLine = `export PATH="$PATH:${folderPath}"\n`;
 
   if (content.includes(exportLine.trim())) {
@@ -39,11 +45,20 @@ export async function addToPath(folderPath: string) {
   // Append to profile
   await fs.appendFile(profileFile, exportLine);
   console.log(`Added ${folderPath} to your PATH in ${profileFile}.`);
+  for (const additionalProfileFile of additionalProfileFiles) {
+    if (await FileManager.exists(additionalProfileFile)) {
+      await fs.appendFile(additionalProfileFile, exportLine);
+      console.log(
+        `Added ${folderPath} to your PATH in ${additionalProfileFile}.`
+      );
+    }
+  }
   console.log(`Please run: source ${profileFile} or restart your terminal.`);
 }
 
 export async function removeFromPath(folderPath: string) {
-  const { profileFile, content } = await getShellProfileContents();
+  const { profileFile, content, additionalProfileFiles } =
+    await getShellProfileContents();
 
   const exportLine = `export PATH="$PATH:${folderPath}"\n`;
 
@@ -52,6 +67,15 @@ export async function removeFromPath(folderPath: string) {
     await fs.writeFile(profileFile, newContent);
     console.log(`Removed ${folderPath} from your PATH in ${profileFile}.`);
     console.log(`Please run: source ${profileFile} or restart your terminal.`);
+    for (const additionalProfileFile of additionalProfileFiles) {
+      if (await FileManager.exists(additionalProfileFile)) {
+        const newContent = content.replace(exportLine, "");
+        await fs.writeFile(additionalProfileFile, newContent);
+        console.log(
+          `Removed ${folderPath} from your PATH in ${additionalProfileFile}.`
+        );
+      }
+    }
   } else {
     console.log(`${folderPath} not found in your PATH.`);
   }
@@ -68,7 +92,16 @@ export async function upsertFolder(folderPath: string) {
 }
 
 export async function createBashFile(filepath: string) {
-  await fs.writeFile(filepath, "#!/bin/bash\n\necho 'hello'", {
+  const platform = process.platform;
+  let shebang = "#!/bin/bash";
+
+  if (platform === "win32") {
+    shebang = "#!/usr/bin/bash";
+  } else if (platform === "darwin" || platform === "linux") {
+    shebang = "#!/bin/bash";
+  }
+
+  await fs.writeFile(filepath, `${shebang}\n\necho 'hello'`, {
     mode: 0o777,
   });
 }
