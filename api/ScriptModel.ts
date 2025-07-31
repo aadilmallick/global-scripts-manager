@@ -13,6 +13,7 @@ export interface Script {
   schedule?: string;
   logs: { filepath: string; createdAt: string }[];
   lastRun?: string;
+  description?: string;
 }
 
 export class ScriptsModel {

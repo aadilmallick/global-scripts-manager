@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   getConfirm,
+  getInput,
   showLoader,
   showQuickPick,
   TextStreamer,
@@ -20,7 +21,13 @@ import {
 } from "./api/ScriptModel.ts";
 import { editTags, getTags } from "./api/tags.ts";
 import { globals } from "./globals.ts";
-import { bgGreen, bgRed, red, yellow } from "jsr:@std/internal@^1.0.5/styles";
+import {
+  bgGreen,
+  bgRed,
+  red,
+  yellow,
+  green,
+} from "jsr:@std/internal@^1.0.5/styles";
 import CLI from "./api/CLI.ts";
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 
@@ -44,7 +51,16 @@ async function streamText(text: string) {
 }
 
 if (import.meta.main) {
-  chooseAction();
+  try {
+    chooseAction();
+  } catch (error) {
+    // check if error is SIGINT
+    if (error instanceof Error && error.message.includes("SIGINT")) {
+      console.log("Goodbye!");
+      Deno.exit();
+    }
+    throw error;
+  }
 }
 
 async function chooseAction() {
@@ -52,7 +68,6 @@ async function chooseAction() {
     "Welcome to Global Scripts Manager. What would you like to do with your scripts today?"
   );
 
-  // TODO: list actions here
   const actions = [
     "create script",
     "delete script",
@@ -148,6 +163,17 @@ async function createScript() {
   await createBashFile(newScript.filepath);
   succeed();
 
+  // add description
+  const description = await getInput(
+    "what is the description of the script? (optional)",
+    {
+      required: false,
+    }
+  );
+  if (description) {
+    scriptModel.editScript(newScript, { description });
+  }
+
   /* Add to path */
   const shouldAddToPath = await getConfirm(
     "do you want to add the script to your path?"
@@ -172,7 +198,7 @@ async function createScript() {
 
 async function listScripts() {
   const action = await showQuickPick(
-    ["list all scripts", "view json"] as const,
+    ["list all scripts", "view json", "quick list"] as const,
     "choose an action:"
   );
   if (!action) return;
@@ -183,6 +209,7 @@ async function listScripts() {
         tags: s.tags.join(", "),
         isGlobal: s.isGlobal ? "global" : "local",
         filepath: s.filepath,
+        description: s.description || "no description",
       };
     });
     const allTags = [...jsonHandler.getTags()];
@@ -191,6 +218,11 @@ async function listScripts() {
   }
   if (action === "view json") {
     await openPathInEditor(pathsHandler.jsonFilePath);
+  }
+  if (action === "quick list") {
+    scriptModel.scripts.forEach((script) => {
+      console.log(green(script.name));
+    });
   }
 }
 
@@ -298,6 +330,20 @@ async function editScript() {
     return script;
   }
 
+  async function editDescription(script: Script) {
+    const description = await getInput(
+      "what is the description of the script? (optional)",
+      {
+        required: false,
+      }
+    );
+    if (description) {
+      const updatedScript = scriptModel.editScript(script, { description });
+      return updatedScript;
+    }
+    return script;
+  }
+
   async function editTagsAction(script: Script) {
     const tags = await editTags(script.tags);
     if (tags.length > 0) {
@@ -348,6 +394,7 @@ async function editScript() {
     "edit name",
     "edit tags",
     "add/remove from path",
+    "edit description",
     "save changes",
   ] as const;
   let chosenAction: (typeof actions)[number] | undefined;
@@ -365,6 +412,9 @@ async function editScript() {
       case "add/remove from path":
         updatedScript = await editIsGlobalAction(updatedScript);
         break;
+      case "edit description":
+        updatedScript = await editDescription(updatedScript);
+        break;
     }
   } while (chosenAction !== "save changes");
 
@@ -379,13 +429,19 @@ async function openScriptInEditor() {
 
 async function openPathInEditor(path: string) {
   const editor = await showQuickPick(
-    ["code", "cursor", "nano", "vi"] as const,
+    ["code", "cursor", "nano", "vi", "open"] as const,
     "choose an editor:"
   );
   if (!editor) return;
   const { succeed, fail } = showLoader("Opening script in editor...");
   try {
-    await CLI.linux(`${editor} ${path}`);
+    // await CLI.linux(`${editor} ${path}`);
+    const cmd = new Deno.Command(editor, {
+      args: [path],
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await cmd.output();
     succeed();
   } catch (e) {
     console.error(e);
